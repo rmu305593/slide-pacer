@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Slide Color Pacer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#1e3a8a;
+--c0:#1e3a8a;--c1:#f28500;--c2:#7b3fb5;--c3:#2e9e44;--c4:#2f5233;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#1a1d24;--text:#f3f4f6;--muted:#9ca3af;--line:#2a2f3a;--accent:#7aa2ff}}
+:root[data-theme="dark"]{--bg:#0f1115;--card:#1a1d24;--text:#f3f4f6;--muted:#9ca3af;--line:#2a2f3a;--accent:#7aa2ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:520px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:4px 0 16px}
+h2{font-size:15px;color:var(--muted);font-weight:600;margin:20px 0 8px;text-transform:uppercase;letter-spacing:.04em}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:14px 10px;font-weight:600;cursor:pointer}
+button.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+button.primary{background:var(--accent);color:#fff;border:none}
+.big{padding:22px 10px;font-size:20px}
+.row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.row .sw{width:14px;height:36px;border-radius:4px;flex:none}
+.row label{flex:1}
+.row input[type=number]{width:72px;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);text-align:center}
+.note{color:var(--muted);font-size:13px;margin:6px 2px}
+.hide{display:none!important}
+/* run screen */
+#run{position:fixed;inset:0;display:flex;flex-direction:column;color:#fff;transition:background .6s}
+#run .top{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;gap:8px}
+#run .chip{background:rgba(0,0,0,.25);padding:6px 10px;border-radius:999px;font-size:13px;font-weight:600}
+#run .top button{background:rgba(0,0,0,.25);color:#fff;border:none;padding:8px 12px;border-radius:999px;font-size:13px}
+#run .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 16px}
+#segName{font-size:clamp(34px,11vw,64px);font-weight:800;line-height:1.05}
+#timeLeft{font-size:clamp(56px,22vw,120px);font-weight:800;font-variant-numeric:tabular-nums;margin:8px 0}
+#sub{font-size:18px;opacity:.9}
+#nextUp{margin-top:14px;font-size:16px;background:rgba(0,0,0,.22);padding:8px 14px;border-radius:999px}
+#bar{display:flex;height:14px;margin:0 16px;border-radius:7px;overflow:hidden;position:relative;background:rgba(0,0,0,.25)}
+#bar div{height:100%;border-right:2px solid rgba(255,255,255,.6)}
+#cursor{position:absolute;top:-3px;bottom:-3px;width:4px;background:#fff;border-radius:2px;box-shadow:0 0 4px #000}
+#run .bot{padding:14px 16px calc(16px + env(safe-area-inset-bottom));display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#run .bot button{background:rgba(0,0,0,.28);color:#fff;border:none;padding:10px 14px;border-radius:12px;font-size:14px}
+.warnflash{animation:fl 1s ease-in-out 3}
+#run.pulse{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{background:var(--seg)}50%{background:var(--segl)}}
+@keyframes fl{50%{filter:brightness(1.6)}}
+</style>
+</head><body>
+
+<div id="setup" class="wrap">
+  <h1>Slide Color Pacer</h1>
+
+  <h2>1 · Department</h2>
+  <div class="grid g2">
+    <button data-dept="ela">ELA</button>
+    <button data-dept="other">Other</button>
+  </div>
+
+  <div id="gradeBox">
+    <h2>2 · Grade</h2>
+    <div class="grid g3">
+      <button data-grade="6">6th</button><button data-grade="7">7th</button><button data-grade="8">8th</button>
+    </div>
+    <p class="note" id="gradeNote">Sets your lunch split and, for ELA, your pacing.</p>
+  </div>
+
+  <div id="minsBox">
+    <h2>Section minutes</h2>
+    <div class="grid" id="mins"></div>
+    <p class="note" id="minsNote"></p>
+  </div>
+
+  <h2>3 · What day is today?</h2>
+  <div class="grid g3">
+    <button class="big" data-day="blue" style="color:#2563eb">Blue</button>
+    <button class="big" data-day="gray" style="color:#6b7280">Gray</button>
+    <button class="big" data-day="charger" style="color:#b45309">Charger</button>
+  </div>
+  <p class="note" id="dayHint"></p>
+  <div id="offBox" class="hide">
+    <h2>4 · Off period<span id="offPl"></span></h2>
+    <div class="grid" id="offs"></div>
+    <p class="note">Saved for next time. During an off period the screen stays gray with no alerts.</p>
+    <button class="primary big" id="startBtn" style="width:100%;margin-top:10px">Start</button>
+  </div>
+
+  <h2>Alerts</h2>
+  <div class="grid">
+    <div class="row"><label for="aVib">Vibrate on color change</label><input type="checkbox" id="aVib" checked></div>
+    <div class="row"><label for="aSnd">Chime on color change</label><input type="checkbox" id="aSnd" checked></div>
+    <div class="row"><label for="aWarn">Heads-up before change (min, 0 = off)</label><input type="number" id="aWarn" min="0" max="10" value="2"></div>
+  </div>
+  <p class="note">Keep this page open with the screen on. Android Chrome: menu ⋮ → "Add to Home screen" to open it like an app.</p>
+</div>
+
+<div id="run" class="hide">
+  <div class="top">
+    <span class="chip" id="info"></span>
+    <button id="back">Change day / setup</button>
+  </div>
+  <div class="mid">
+    <div id="segName"></div>
+    <div id="timeLeft"></div>
+    <div id="sub"></div>
+    <div id="nextUp"></div>
+  </div>
+  <div id="bar"></div>
+  <div class="bot">
+    <button id="manual">Start lesson now (off-schedule)</button>
+    <button id="endManual" class="hide">Back to bell schedule</button>
+    <button id="test">Test alert</button>
+  </div>
+</div>
+
+<script>
+const SEGS=[{n:"Do Now",c:"#016f5b"},{n:"Tangerine",c:"#d27040"},{n:"Purple",c:"#474f99"},{n:"Green",c:"#6db83d"},{n:"DOL",c:"#016f5b"}];
+const lighten=(h,a=.45)=>"#"+[1,3,5].map(i=>Math.round(parseInt(h.substr(i,2),16)+(255-parseInt(h.substr(i,2),16))*a).toString(16).padStart(2,"0")).join("");
+const ELA={6:[5,30,15,20,10],7:[5,35,15,15,15],8:[5,35,20,20,10]};
+const IDLE="#374151";
+
+// ---- Bell schedules (minutes since midnight) ----
+const t=s=>{const[h,m]=s.split(":").map(Number);return h*60+m};
+function bell(day,g){
+  const P=[];const add=(label,...ivs)=>P.push({label,iv:ivs.map(([a,b])=>[t(a),t(b)])});
+  let lunch;
+  if(day==="charger"){
+    add("1st Period",["8:30","9:15"]);add("2nd Period",["9:20","10:05"]);
+    add("3rd Period",["10:10","10:55"]);add("4th Period",["11:00","11:45"]);
+    if(g==6){add("5th Period",["12:20","13:30"]);lunch=["11:45","12:15"]}
+    if(g==7){add("5th Period",["11:50","12:25"],["13:00","13:30"]);lunch=["12:25","12:55"]}
+    if(g==8){add("5th Period",["11:50","13:00"]);lunch=["13:00","13:30"]}
+    add("6th Period",["13:35","14:20"]);add("7th Period",["14:25","15:10"]);add("8th Period",["15:15","16:00"]);
+  }else{
+    const o=day==="blue";const L=(a,b)=>(o?a:b)+" Period";
+    add(L("1st","2nd"),["8:30","10:00"]);add(L("3rd","4th"),["10:05","11:35"]);
+    if(g==6){add(L("5th","6th"),["12:10","13:40"]);lunch=["11:35","12:05"]}
+    if(g==7){add(L("5th","6th"),["11:40","12:25"],["13:00","13:40"]);lunch=["12:25","12:55"]}
+    if(g==8){add(L("5th","6th"),["11:40","13:10"]);lunch=["13:10","13:40"]}
+    add(L("7th","8th"),["14:30","16:00"]);
+  }
+  const blocks=[];
+  blocks.push({label:"Lunch",a:t(lunch[0]),b:t(lunch[1])});
+  if(day!=="charger"){
+    const wd=new Date().getDay();
+    blocks.push({label:wd===1?"Charger Time":"Team Time",a:t("13:45"),b:t("14:25")});
+  }
+  return {periods:P,blocks};
+}
+
+// ---- State ----
+let S={dept:null,grade:null,other:[5,35,15,15,15],day:null,vib:true,snd:true,warn:2};
+try{Object.assign(S,JSON.parse(localStorage.getItem("pacer")||"{}"))}catch(e){}
+S.day=null; // always ask day
+const save=()=>{try{localStorage.setItem("pacer",JSON.stringify({...S,day:null}))}catch(e){}};
+const plan=()=>S.dept==="ela"?ELA[S.grade]:S.other;
+let manual=null; // {start:ms, iv:[[a,b]] in minutes}
+const $=id=>document.getElementById(id);
+
+// ---- Setup UI ----
+function renderSetup(){
+  document.querySelectorAll("[data-dept]").forEach(b=>b.classList.toggle("sel",b.dataset.dept===S.dept));
+  document.querySelectorAll("[data-grade]").forEach(b=>b.classList.toggle("sel",b.dataset.grade==S.grade));
+  $("gradeBox").classList.toggle("hide",!S.dept);
+  $("minsBox").classList.toggle("hide",!S.dept||!S.grade);
+  if(S.dept&&S.grade){
+    const p=plan(),ro=S.dept==="ela";
+    $("mins").innerHTML=SEGS.map((s,i)=>`<div class="row"><span class="sw" style="background:${s.c}"></span><label for="m${i}">${s.full||s.n}</label><input type="number" id="m${i}" min="0" max="120" value="${p[i]}" ${ro?"disabled":""}></div>`).join("");
+    if(!ro)SEGS.forEach((s,i)=>$("m"+i).oninput=e=>{S.other[i]=Math.max(0,+e.target.value||0);save();note()});
+    note();
+  }
+  const wd=new Date().getDay();
+  const sug={1:"Blue",4:"Blue",2:"Gray",5:"Gray",3:"Charger"}[wd];
+  $("dayHint").textContent=sug?`Usually ${sug} on ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][wd]}, but check this week's schedule.`:"";
+  $("aVib").checked=S.vib;$("aSnd").checked=S.snd;$("aWarn").value=S.warn;
+}
+function note(){
+  const tot=plan().reduce((a,b)=>a+b,0);
+  $("minsNote").textContent=`Total ${tot} min. In longer periods DOL holds until the bell; in shorter periods (Charger day) every section shrinks proportionally.`;
+}
+document.querySelectorAll("[data-dept]").forEach(b=>b.onclick=()=>{S.dept=b.dataset.dept;save();renderSetup()});
+document.querySelectorAll("[data-grade]").forEach(b=>b.onclick=()=>{S.grade=+b.dataset.grade;save();renderSetup()});
+$("aVib").onchange=e=>{S.vib=e.target.checked;save()};
+$("aSnd").onchange=e=>{S.snd=e.target.checked;save()};
+$("aWarn").oninput=e=>{S.warn=Math.max(0,+e.target.value||0);save()};
+let pickDay=null;
+const OFFOPTS={blue:["1st","3rd","5th","7th"],gray:["2nd","4th","6th","8th"],charger:["1st","2nd","3rd","4th","5th","6th","7th","8th"]};
+function renderOffs(){
+  document.querySelectorAll("[data-day]").forEach(x=>x.classList.toggle("sel",x.dataset.day===pickDay));
+  $("offBox").classList.toggle("hide",!pickDay);if(!pickDay)return;
+  const n=pickDay==="charger"?2:1;S.off=S.off||{};S.off[pickDay]=(S.off[pickDay]||[]).slice(0,n);
+  $("offPl").textContent=n>1?"s (pick 2)":"";
+  $("offs").innerHTML=Array.from({length:n},(_,k)=>`<div class="row"><label for="off${k}">Off period${n>1?" "+(k+1):""}</label><select id="off${k}" style="font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)"><option value="">None</option>${OFFOPTS[pickDay].map(o=>`<option ${S.off[pickDay][k]===o?"selected":""}>${o}</option>`).join("")}</select></div>`).join("");
+  for(let k=0;k<n;k++)$("off"+k).onchange=e=>{S.off[pickDay][k]=e.target.value;save()};
+}
+document.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{
+  if(!S.dept||!S.grade){alertMsg("Pick a department and grade first.");return}
+  pickDay=b.dataset.day;renderOffs();$("offBox").scrollIntoView({behavior:"smooth"});
+});
+$("startBtn").onclick=()=>{
+  S.day=pickDay;unlockAudio();wake();lastKey=null;
+  $("setup").classList.add("hide");$("run").classList.remove("hide");tick();
+};
+function alertMsg(m){$("dayHint").textContent=m;$("dayHint").style.color="#dc2626";setTimeout(()=>{$("dayHint").style.color="";renderSetup()},2500)}
+$("back").onclick=()=>{S.day=null;manual=null;$("run").classList.add("hide");$("setup").classList.remove("hide");renderSetup()};
+$("manual").onclick=()=>{
+  const tot=plan().reduce((a,b)=>a+b,0);
+  const v=prompt("Lesson length in minutes (starts now):",tot);if(v===null)return;
+  const len=Math.max(1,+v||tot);const n=nowMin();manual={iv:[[n,n+len]]};lastKey=null;tick();
+};
+$("endManual").onclick=()=>{manual=null;lastKey=null;tick()};
+$("test").onclick=()=>{unlockAudio();alertChange()};
+
+// ---- Time ----
+const qs=new URLSearchParams(location.search).get("t"); // test override HH:MM
+const t0=Date.now();
+function nowMin(){
+  if(qs)return t(qs)+(Date.now()-t0)/60000;
+  const d=new Date();return d.getHours()*60+d.getMinutes()+d.getSeconds()/60+d.getMilliseconds()/60000;
+}
+const fmtClock=m=>{let h=Math.floor(m/60),mm=Math.round(m%60);if(mm===60){h++;mm=0}const ap=h>=12?"PM":"AM";return `${((h+11)%12)+1}:${String(mm).padStart(2,"0")} ${ap}`};
+const fmtLeft=m=>{const s=Math.max(0,Math.ceil(m*60));return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`};
+
+// Build segment lengths for a period with T class minutes
+function segLens(T){
+  const p=plan();const P=p.reduce((a,b)=>a+b,0)||1;
+  if(T>=P){const l=[...p];l[4]+=T-P;return l}
+  return p.map(x=>x*T/P);
+}
+
+// ---- Main loop ----
+let lastKey=null,lastWarn=null;
+function tick(){
+  if(!S.day)return;
+  const n=nowMin();const B=bell(S.day,S.grade);
+  const periods=manual?[{label:"Manual lesson",iv:manual.iv}]:B.periods;
+  $("manual").classList.toggle("hide",!!manual);$("endManual").classList.toggle("hide",!manual);
+  $("info").textContent=`${S.day[0].toUpperCase()+S.day.slice(1)} · ${S.dept==="ela"?"ELA":"Other"} ${S.grade}th`;
+  let cur=periods.find(p=>n>=p.iv[0][0]&&n<p.iv[p.iv.length-1][1]);
+  if(manual&&!cur){manual=null;return tick()}
+  if(!cur){
+    const blk=B.blocks.find(b=>n>=b.a&&n<b.b);
+    const nx=periods.find(p=>p.iv[0][0]>n);
+    showIdle(blk?blk.label:(nx?"Passing / No class":"Day is over"),
+      blk?`Ends ${fmtClock(blk.b)}`:"",
+      nx?`Next: ${nx.label} at ${fmtClock(nx.iv[0][0])}`:"");
+    return;
+  }
+  const offs=(S.off&&S.off[S.day])||[];
+  if(!manual&&offs.some(o=>o&&cur.label.startsWith(o))){
+    showIdle("Off Period",cur.label,`Ends ${fmtClock(cur.iv[cur.iv.length-1][1])}`);return;
+  }
+  // inside period; check lunch gap
+  let elapsed=0,inGap=null;
+  for(let i=0;i<cur.iv.length;i++){const[a,b]=cur.iv[i];
+    if(n>=b){elapsed+=b-a;continue}
+    if(n>=a){elapsed+=n-a;break}
+    inGap={resume:a};break;}
+  const T=cur.iv.reduce((s,[a,b])=>s+b-a,0);
+  const L=segLens(T);
+  let idx=0,acc=0;while(idx<4&&elapsed>=acc+L[idx]){acc+=L[idx];idx++}
+  const left=acc+L[idx]-elapsed;
+  drawBar(L,elapsed/T);
+  if(inGap){
+    showIdle("Lunch","Timer paused",`Resume on ${SEGS[idx].n} at ${fmtClock(inGap.resume)}`,true);
+    return;
+  }
+  const seg=SEGS[idx];
+  const warnOn=S.warn>0&&idx<4&&left<=S.warn;
+  const r=$("run");r.style.setProperty("--seg",seg.c);r.style.setProperty("--segl",lighten(seg.c));
+  r.style.background=seg.c;r.classList.toggle("pulse",warnOn);
+  $("segName").textContent=seg.full||seg.n;
+  $("timeLeft").textContent=fmtLeft(left);
+  $("sub").textContent=`${cur.label} · class ends ${fmtClock(cur.iv[cur.iv.length-1][1])}`;
+  $("nextUp").textContent=idx<4?`Next: ${SEGS[idx+1].n}`:"Last section, hold until the bell";
+  $("nextUp").classList.remove("hide");
+  const key=cur.label+"|"+idx;
+  if(lastKey!==null&&key!==lastKey&&lastKey.split("|")[0]===cur.label)alertChange();
+  lastKey=key;
+  if(S.warn>0&&idx<4&&left<=S.warn&&left>S.warn-0.05&&lastWarn!==key){lastWarn=key;alertWarn()}
+}
+function showIdle(a,b,c,keepBar){
+  $("run").classList.remove("pulse");$("run").style.background=IDLE;$("segName").textContent=a;$("timeLeft").textContent="";
+  $("sub").textContent=b;$("nextUp").textContent=c;$("nextUp").classList.toggle("hide",!c);
+  if(!keepBar)$("bar").innerHTML="";lastKey=null;
+}
+function drawBar(L,frac){
+  const T=L.reduce((a,b)=>a+b,0);
+  $("bar").innerHTML=L.map((l,i)=>`<div style="width:${l/T*100}%;background:${SEGS[i].c}"></div>`).join("")+`<span id="cursor" style="left:calc(${Math.min(1,frac)*100}% - 2px)"></span>`;
+}
+
+// ---- Alerts ----
+let ac;
+function unlockAudio(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}}
+function tone(f,d,when=0,vol=.25){if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.type="sine";
+  const s=ac.currentTime+when;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(vol,s+.02);g.gain.exponentialRampToValueAtTime(.001,s+d);
+  o.connect(g).connect(ac.destination);o.start(s);o.stop(s+d+.05)}
+function alertChange(){
+  if(S.vib&&navigator.vibrate)navigator.vibrate([500,200,500,200,500]);
+  if(S.snd){tone(880,.5);tone(1175,.6,.25);tone(1568,.8,.5)}
+  flash();
+}
+function alertWarn(){
+  if(S.vib&&navigator.vibrate)navigator.vibrate([200]);
+  if(S.snd)tone(660,.3,0,.15);
+  flash();
+}
+function flash(){const r=$("run");r.classList.remove("warnflash");void r.offsetWidth;r.classList.add("warnflash")}
+
+// keep screen awake
+let wl;
+async function wake(){try{if("wakeLock"in navigator)wl=await navigator.wakeLock.request("screen")}catch(e){}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&S.day){wake();tick()}});
+
+renderSetup();
+setInterval(tick,1000);
+</script>
+</body></html>
