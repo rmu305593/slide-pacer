@@ -31,12 +31,15 @@ button.primary{background:var(--accent);color:#fff;border:none}
 #run .top{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;gap:8px}
 #run .chip{background:rgba(0,0,0,.25);padding:6px 10px;border-radius:999px;font-size:13px;font-weight:600}
 #run .top button{background:rgba(0,0,0,.25);color:#fff;border:none;padding:8px 12px;border-radius:999px;font-size:13px}
-#run .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 16px}
+#run .mid{flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 12px;min-height:0}
+#run .col{display:flex;flex-direction:column;align-items:center;min-width:0}
+#run.idle #segName{order:0}#run.idle #timeLeft{order:1}#run.idle #sub{order:2}#run.idle #nextUp{order:3}#run.idle #classLeft{order:4;margin:12px 0 0}
+#run.cr #segName{font-size:clamp(26px,8vw,56px)}#run.cr #timeLeft{font-size:clamp(48px,16vw,110px)}#run.cr #sub{font-size:15px}
 #segName{font-size:clamp(34px,11vw,64px);font-weight:800;line-height:1.05}
 #timeLeft{font-size:clamp(56px,22vw,120px);font-weight:800;font-variant-numeric:tabular-nums;margin:8px 0}
 #sub{font-size:18px;opacity:.9}
 #nextUp{margin-top:14px;font-size:16px;background:rgba(0,0,0,.22);padding:8px 14px;border-radius:999px}
-#bar{display:flex;height:14px;margin:0 16px;border-radius:7px;overflow:hidden;position:relative;background:rgba(0,0,0,.25)}
+#bar{display:flex;flex-shrink:0;height:14px;margin:0 16px;border-radius:7px;overflow:hidden;position:relative;background:rgba(0,0,0,.25)}
 #bar div{height:100%;border-right:2px solid rgba(255,255,255,.6)}
 #cursor{position:absolute;top:-3px;bottom:-3px;width:4px;background:#fff;border-radius:2px;box-shadow:0 0 4px #000}
 #classLeft{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;background:rgba(0,0,0,.22);padding:6px 14px;border-radius:999px;margin-bottom:6px}
@@ -56,6 +59,9 @@ button.primary{background:var(--accent);color:#fff;border:none}
 #tp button.on{background:#facc15;color:#111}
 body.testing #run .bot{padding-bottom:150px}body.testing #setup{padding-bottom:170px}
 #testBtn{width:100%;margin-top:4px;border-color:#facc15}
+#crChart{flex:none;width:auto;white-space:nowrap;border-collapse:collapse;background:#fff;color:#000;font:13px/1.25 "Times New Roman",Times,serif;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+#crChart td{border:1px solid #000;padding:2px 5px;text-align:left}
+#crChart td.now{background:#facc15;font-weight:700;outline:3px solid #000;outline-offset:-3px}
 </style>
 </head><body>
 
@@ -88,6 +94,7 @@ body.testing #run .bot{padding-bottom:150px}body.testing #setup{padding-bottom:1
     <button class="big" data-day="gray" style="color:#6b7280">Gray</button>
     <button class="big" data-day="charger" style="color:#b45309">Charger</button>
   </div>
+  <button class="big hide" id="crBtn" data-day="colorrun" style="width:100%;margin-top:10px;color:#db2777">Color Run (Modified Charger)</button>
   <p class="note" id="dayHint"></p>
   <div id="offBox" class="hide">
     <h2>4 · Off period<span id="offPl"></span></h2>
@@ -114,11 +121,14 @@ body.testing #run .bot{padding-bottom:150px}body.testing #setup{padding-bottom:1
     <button id="back">Change day / setup</button>
   </div>
   <div class="mid">
-    <div id="segName"></div>
-    <div id="timeLeft"></div>
-    <div id="classLeft" class="hide"></div>
-    <div id="sub"></div>
-    <div id="nextUp"></div>
+    <table id="crChart" class="hide"></table>
+    <div class="col">
+      <div id="segName"></div>
+      <div id="timeLeft"></div>
+      <div id="classLeft" class="hide"></div>
+      <div id="sub"></div>
+      <div id="nextUp"></div>
+    </div>
   </div>
   <div id="lunchCd" class="hide"></div>
   <div id="bar"></div>
@@ -126,6 +136,7 @@ body.testing #run .bot{padding-bottom:150px}body.testing #setup{padding-bottom:1
   <div class="bot">
     <button id="manual">Start lesson now (off-schedule)</button>
     <button id="endManual" class="hide">Back to bell schedule</button>
+    <button id="paceBtn">Disable Slide Pacing</button>
     <button id="test">Test alert</button>
   </div>
 </div>
@@ -148,7 +159,14 @@ const t=s=>{const[h,m]=s.split(":").map(Number);return h*60+m};
 function bell(day,g){
   const P=[];const add=(label,...ivs)=>P.push({label,iv:ivs.map(([a,b])=>[t(a),t(b)])});
   let lunch;
-  if(day==="charger"){
+  if(day==="colorrun"){
+    add("1st Period",["8:30","8:50"]);add("2nd Period",["8:55","9:15"]);add("3rd Period",["9:20","9:40"]);
+    add("4th Period",["9:45","10:05"]);add("6th Period",["10:10","10:30"]);add("7th Period",["10:35","10:55"]);
+    add("8th Period",["11:00","11:20"]);
+    if(g==6){add("5th Period",["11:50","13:00"]);lunch=["11:20","11:50"]}
+    if(g==7){add("5th Period",["11:25","11:55"],["12:25","13:00"]);lunch=["11:55","12:25"]}
+    if(g==8){add("5th Period",["11:25","12:30"]);lunch=["12:30","13:00"]}
+  }else if(day==="charger"){
     add("1st Period",["8:30","9:15"]);add("2nd Period",["9:20","10:05"]);
     add("3rd Period",["10:10","10:55"]);add("4th Period",["11:00","11:45"]);
     if(g==6){add("5th Period",["12:20","13:30"]);lunch=["11:45","12:15"]}
@@ -165,13 +183,18 @@ function bell(day,g){
   }
   const blocks=[];
   blocks.push({label:"Lunch",a:t(lunch[0]),b:t(lunch[1])});
-  if(day!=="charger"){
+  if(day==="colorrun")blocks.push({label:"Team Time / Color Run",a:t("13:05"),b:t("16:00")});
+  if(day==="blue"||day==="gray"){
     const wd=new Date().getDay();
     blocks.push({label:wd===1?"Charger Time":"Team Time",a:t("13:45"),b:t("14:25")});
   }
   return {periods:P,blocks};
 }
 
+// Color Run button window: Nov 12, 2026, 7:00 AM to 4:00 PM (device local time). Always shown in test mode.
+const CR_FROM=new Date(2026,10,12,7,0),CR_TO=new Date(2026,10,12,16,0);
+const crOpen=()=>{const d=new Date();return d>=CR_FROM&&d<CR_TO};
+const DAYNAME={blue:"Blue",gray:"Gray",charger:"Charger",colorrun:"Color Run"};
 // ---- State ----
 let S={dept:null,grade:null,other:[5,35,15,15,15],day:null,vib:true,snd:true,warn:2};
 try{Object.assign(S,JSON.parse(localStorage.getItem("pacer")||"{}"))}catch(e){}
@@ -193,6 +216,7 @@ function renderSetup(){
     if(!ro)SEGS.forEach((s,i)=>$("m"+i).oninput=e=>{S.other[i]=Math.max(0,+e.target.value||0);save();note()});
     note();
   }
+  $("crBtn").classList.toggle("hide",!(crOpen()||testMode));
   const wd=new Date().getDay();
   const sug={1:"Blue",4:"Blue",2:"Gray",5:"Gray",3:"Charger"}[wd];
   $("dayHint").textContent=sug?`Usually ${sug} on ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][wd]}, but check this week's schedule.`:"";
@@ -208,11 +232,11 @@ $("aVib").onchange=e=>{S.vib=e.target.checked;save()};
 $("aSnd").onchange=e=>{S.snd=e.target.checked;save()};
 $("aWarn").oninput=e=>{S.warn=Math.max(0,+e.target.value||0);save()};
 let pickDay=null;
-const OFFOPTS={blue:["1st","3rd","5th","7th"],gray:["2nd","4th","6th","8th"],charger:["1st","2nd","3rd","4th","5th","6th","7th","8th"]};
+const OFFOPTS={colorrun:["1st","2nd","3rd","4th","5th","6th","7th","8th"],blue:["1st","3rd","5th","7th"],gray:["2nd","4th","6th","8th"],charger:["1st","2nd","3rd","4th","5th","6th","7th","8th"]};
 function renderOffs(){
   document.querySelectorAll("[data-day]").forEach(x=>x.classList.toggle("sel",x.dataset.day===pickDay));
   $("offBox").classList.toggle("hide",!pickDay);if(!pickDay)return;
-  const n=pickDay==="charger"?2:1;S.off=S.off||{};S.off[pickDay]=(S.off[pickDay]||[]).slice(0,n);
+  const n=(pickDay==="charger"||pickDay==="colorrun")?2:1;S.off=S.off||{};S.off[pickDay]=(S.off[pickDay]||[]).slice(0,n);
   $("offPl").textContent=n>1?"s (pick 2)":"";
   $("offs").innerHTML=Array.from({length:n},(_,k)=>`<div class="row"><label for="off${k}">Off period${n>1?" "+(k+1):""}</label><select id="off${k}" style="font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)"><option value="">None</option>${OFFOPTS[pickDay].map(o=>`<option ${S.off[pickDay][k]===o?"selected":""}>${o}</option>`).join("")}</select></div>`).join("");
   for(let k=0;k<n;k++)$("off"+k).onchange=e=>{S.off[pickDay][k]=e.target.value;save()};
@@ -233,6 +257,8 @@ $("manual").onclick=()=>{
   const len=Math.max(1,+v||tot);const n=nowMin();manual={iv:[[n,n+len]]};lastKey=null;tick();
 };
 $("endManual").onclick=()=>{manual=null;lastKey=null;tick()};
+function showPace(){$("paceBtn").textContent=S.noPace?"Enable Slide Pacing":"Disable Slide Pacing"}
+$("paceBtn").onclick=()=>{S.noPace=!S.noPace;save();showPace();lastKey=null;lastWarn=null;tick()};
 $("test").onclick=()=>{unlockAudio();alertChange()};
 
 // ---- Time ----
@@ -268,7 +294,7 @@ function setTest(on){
   $("testBtn").textContent=on?"Exit test mode":"Open test mode";
   document.querySelector("#setup h1").textContent=on?"Slide Color Pacer · TEST MODE":"Slide Color Pacer";
   if(on){simBase=t($("tpSet").value||"08:28");realBase=Date.now()}
-  lastKey=null;lastWarn=null;tick();showNow();
+  lastKey=null;lastWarn=null;tick();showNow();renderSetup();
 }
 $("testBtn").onclick=()=>setTest(!testMode);
 $("tpExit").onclick=()=>setTest(false);
@@ -283,9 +309,10 @@ function tick(){
   const n=nowMin();const B=bell(S.day,S.grade);
   const periods=manual?[{label:"Manual lesson",iv:manual.iv}]:B.periods;
   $("manual").classList.toggle("hide",!!manual);$("endManual").classList.toggle("hide",!manual);
-  $("info").textContent=`${S.day[0].toUpperCase()+S.day.slice(1)} · ${S.dept==="ela"?"ELA":"Other"} ${S.grade}th`;
+  $("info").textContent=`${DAYNAME[S.day]} · ${S.dept==="ela"?"ELA":"Other"} ${S.grade}th`;
   let cur=periods.find(p=>n>=p.iv[0][0]&&n<p.iv[p.iv.length-1][1]);
   if(manual&&!cur){manual=null;return tick()}
+  crChart(cur?cur.label:(B.blocks.find(b=>n>=b.a&&n<b.b)||{}).label);
   if(!cur){
     const blk=B.blocks.find(b=>n>=b.a&&n<b.b);
     const nx=periods.find(p=>p.iv[0][0]>n);
@@ -293,6 +320,7 @@ function tick(){
       blk?`Ends ${fmtClock(blk.b)}`:"",
       nx?`Next: ${nx.label} at ${fmtClock(nx.iv[0][0])}`:"");
     if(nx&&!blk)$("timeLeft").textContent=fmtLeft(nx.iv[0][0]-n);
+    if(blk)$("timeLeft").textContent=fmtLeft(blk.b-n);
     if(nx&&blk&&blk.b>=nx.iv[0][0]-5)$("classLeft").textContent=`Class starts in ${fmtLeft(nx.iv[0][0]-n)}`,$("classLeft").classList.remove("hide");
     lunchCd(n,B);return;
   }
@@ -313,15 +341,23 @@ function tick(){
   const left=acc+L[idx]-elapsed;
   drawBar(L,elapsed/T);
   const clsTxt=`Class time left ${fmtLeft(T-elapsed)}`;
+  if(S.noPace&&!inGap){
+    const r=$("run");r.classList.remove("pulse","idle");r.style.background="#1f2937";
+    $("bar").innerHTML="";$("segName").textContent=cur.label;
+    $("timeLeft").textContent=fmtLeft(T-elapsed);$("classLeft").classList.add("hide");
+    $("sub").textContent="Simple timer · class time left";
+    $("nextUp").textContent=`Class ends ${fmtClock(cur.iv[cur.iv.length-1][1])}`;$("nextUp").classList.remove("hide");
+    lastKey=null;return;
+  }
   if(inGap){
-    showIdle("Lunch","Timer paused",`Resume on ${SEGS[idx].n} at ${fmtClock(inGap.resume)}`,true);
+    showIdle("Lunch","Timer paused",`Resume on ${S.noPace?"class":SEGS[idx].n} at ${fmtClock(inGap.resume)}`,true);
     $("timeLeft").textContent=fmtLeft(inGap.resume-n);$("classLeft").textContent=clsTxt;$("classLeft").classList.remove("hide");
     return;
   }
   const seg=SEGS[idx];
   const warnOn=S.warn>0&&idx<4&&left<=S.warn;
   const r=$("run");r.style.setProperty("--seg",seg.c);r.style.setProperty("--segl",lighten(seg.c));
-  r.style.background=seg.c;r.classList.toggle("pulse",warnOn);
+  r.style.background=seg.c;r.classList.toggle("pulse",warnOn);r.classList.remove("idle");
   $("segName").textContent=seg.full||seg.n;
   $("timeLeft").textContent=fmtLeft(left);
   $("classLeft").textContent=clsTxt;$("classLeft").classList.remove("hide");
@@ -333,11 +369,23 @@ function tick(){
   lastKey=key;
   if(S.warn>0&&idx<4&&left<=S.warn&&left>S.warn-0.05&&lastWarn!==key){lastWarn=key;alertWarn()}
 }
+const CR_ROWS=["1st","2nd","3rd","4th","6th","7th","8th","5th"];
+const sup=o=>o.replace(/(st|nd|rd|th)$/,"<sup>$1</sup>");
+function crChart(label){
+  const el=$("crChart");
+  const on=S.day==="colorrun"&&!manual;$("run").classList.toggle("cr",on);
+  if(!on){el.classList.add("hide");return}
+  el.classList.remove("hide");
+  const rows=CR_ROWS.map(o=>[`${sup(o)} Period`,label&&label.startsWith(o+" ")]);
+  rows.push(["Team Time",label&&label.startsWith("Team Time")]);
+  el.innerHTML=rows.map(([t,on])=>`<tr><td class="${on?"now":""}">${on?"▶ ":""}${t}</td></tr>`).join("");
+}
 function lunchCd(n,B){
   const l=B.blocks.find(b=>b.label==="Lunch");const el=$("lunchCd");
   if(!manual&&l&&n<l.a&&l.a-n<=95){el.textContent=`Lunch in ${fmtLeft(l.a-n)}`;el.classList.remove("hide")}else el.classList.add("hide");
 }
 function showIdle(a,b,c,keepBar){
+  $("run").classList.add("idle");
   $("run").classList.remove("pulse");$("run").style.background=IDLE;$("segName").textContent=a;$("timeLeft").textContent="";$("classLeft").classList.add("hide");
   $("sub").textContent=b;$("nextUp").textContent=c;$("nextUp").classList.toggle("hide",!c);
   if(!keepBar)$("bar").innerHTML="";lastKey=null;
@@ -370,7 +418,7 @@ let wl;
 async function wake(){try{if("wakeLock"in navigator)wl=await navigator.wakeLock.request("screen")}catch(e){}}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&S.day){wake();tick()}});
 
-showAdj();renderSetup();
+showAdj();showPace();renderSetup();
 setInterval(tick,1000);
 </script>
 </body></html>
