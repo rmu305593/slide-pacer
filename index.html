@@ -101,6 +101,7 @@ body.testing #setup,body.testing #opts{padding-bottom:170px}
 #run.obs #crChart{display:none}
 #marker .ctr{position:absolute;left:-1px;top:-1px;width:2px;height:2px;opacity:0;pointer-events:none}
 </style>
+<script data-goatcounter="https://nukananda.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head><body>
 
 <div id="setup" class="wrap">
@@ -320,6 +321,7 @@ document.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{
 });
 $("startBtn").onclick=()=>{
   S.day=pickDay;unlockAudio();wake();lastKey=null;prevN=null;
+  if(!testMode)gcEvent(`start-${pickDay}-${S.dept}-${S.grade}`,`Start: ${DAYNAME[pickDay]} · ${DEPTNAME[S.dept]} ${S.grade}th`);
   $("setup").classList.add("hide");$("run").classList.remove("hide");tick();openMenu(15000);
 };
 function alertMsg(m){$("dayHint").textContent=m;$("dayHint").style.color="#dc2626";setTimeout(()=>{$("dayHint").style.color="";renderSetup()},2500)}
@@ -384,7 +386,7 @@ function setTest(on){
   lastKey=null;lastWarn=null;tick();showNow();renderSetup();setTpH();
 }
 $("testBtn").onclick=()=>{
-  if(!testMode){setTest(true);return}
+  if(!testMode){setTest(true);gcEvent("test-mode","Test mode opened");return}
   $("opts").classList.add("hide");$("setup").classList.remove("hide");scrollTo(0,0);
   if(S.dept&&S.grade&&pickDay){$("startBtn").onclick()}
   else{alertMsg("Test mode is on. Pick your department, grade and day, then tap Start.");const h=$("dayHint");h.scrollIntoView({behavior:"smooth",block:"center"})}
@@ -397,6 +399,7 @@ document.querySelectorAll("[data-j]").forEach(b=>b.onclick=()=>setSim(rawNow()+ 
 document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{simBase=rawNow();realBase=Date.now();speed=+b.dataset.sp;document.querySelectorAll("[data-sp]").forEach(x=>x.classList.toggle("on",x===b))});
 setInterval(showNow,250);
 $("adjReset").onclick=()=>{S.adj=0;save();showAdj();lastKey=null;tick()};
+function gcEvent(path,title){try{if(window.goatcounter&&goatcounter.count)goatcounter.count({path,title:title||path,event:true})}catch(e){}}
 // ---- Main loop ----
 let lastKey=null,lastWarn=null;
 function tick(){
@@ -515,7 +518,7 @@ function renderObs(){
   let k=0;$("obsList").innerHTML=OBS.map(([h,items])=>`<h4>${h}</h4>`+items.map(([t,d])=>`<label><input type="checkbox" id="ob${k++}"><span><b>${t}</b><small>${d}</small></span></label>`).join("")).join("");
 }
 function obsClock(){if(!obsStart)return;const s=Math.floor((Date.now()-obsStart)/1000);const el=$("obsClock");el.textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")} / 15:00`;el.style.background=s>=900?"#9a4a20":"#13302b"}
-function openObs(){if(!obsStart){obsStart=Date.now();renderObs()}$("obsPanel").classList.remove("hide");$("run").classList.add("obs");obsClock();clearInterval(obsT);obsT=setInterval(obsClock,1000)}
+function openObs(){if(!obsStart&&!testMode)gcEvent("observer-checklist","Observer Checklist opened");if(!obsStart){obsStart=Date.now();renderObs()}$("obsPanel").classList.remove("hide");$("run").classList.add("obs");obsClock();clearInterval(obsT);obsT=setInterval(obsClock,1000)}
 function closeObs(){$("obsPanel").classList.add("hide");$("run").classList.remove("obs")}
 $("obsBtn").onclick=()=>$("obsPanel").classList.contains("hide")?openObs():closeObs();
 $("obsClose").onclick=closeObs;
